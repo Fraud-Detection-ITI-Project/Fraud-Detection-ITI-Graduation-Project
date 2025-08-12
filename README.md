@@ -1,242 +1,171 @@
-# Cloud-Native, Real-Time Financial Fraud Detection System
+# Cloud-Native Real-Time Financial Fraud Detection System
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 ![AWS](https://img.shields.io/badge/AWS-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white)
 ![Kafka](https://img.shields.io/badge/Apache%20Kafka-231F20?style=for-the-badge&logo=apachekafka&logoColor=white)
 ![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
-![XGBoost](https://img.shields.io/badge/XGBoost-006600?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB2ZXJzaW9uPSIxLjEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cGF0aCBmaWxsPSIjZmZmIiBkPSJNMzIgMTZMMTYgMzJ2NjRsMTYtMTZWMzJsNDggNDh2MTZMNzIgODBMNDAgNDhsNDAgNDBINDY0VjE2SDMyem0zMiA0MGwtOCA4VjcyaDh2LTh6bTAtNDBMMzIgNDhoOFYyNGg0MHY0MGgtOFYyNGg4VjE2aC04djhoLTRWMzJoOFYxNkg2NHptMTYgNDBMMzIgNjRoOFY0MGg0MHY0MEg1NnYtOEg0OHYxNmwxNi0xNmg4di04eiIvPjwvc3ZnPg==)
 
-This repository contains the full implementation of a cloud-native, real-time financial fraud detection system built entirely on Amazon Web Services (AWS). The project demonstrates an end-to-end pipeline that ingests, processes, analyzes, and visualizes financial transactions to detect and alert on fraudulent activity in near real-time.
+This repository contains the source code and documentation for an end-to-end, cloud-native financial fraud detection system. The architecture is built entirely on Amazon Web Services (AWS) and is designed to ingest, process, and analyze high-velocity transaction data to identify and alert on fraudulent activity in near real-time.
 
-This project was submitted as a capstone for the Information Technology Institute (ITI), Suez Canal Branch.
+This project was developed as a capstone for the Information Technology Institute (ITI).
 
----
+## Table of Contents
 
-## 📖 Table of Contents
+- [Project Abstract](#project-abstract)
+- [Key Architectural Features](#key-architectural-features)
+- [System Architecture and Data Flow](#system-architecture-and-data-flow)
+- [Technology Stack](#technology-stack)
+- [Synthetic Data Generation](#synthetic-data-generation)
+- [Machine Learning Model](#machine-learning-model)
+- [Automated Alerting Workflow](#automated-alerting-workflow)
+- [Analytics and Visualization](#analytics-and-visualization)
+- [Deployment Guide](#deployment-guide)
+- [Project Structure](#project-structure)
+- [Limitations and Future Work](#limitations-and-future-work)
+- [Contributors](#contributors)
 
-- [Project Overview](#-project-overview)
-- [Key Features](#-key-features)
-- [System Architecture](#-system-architecture)
-- [Tech Stack](#-tech-stack)
-- [The Synthetic Data Simulator](#-the-synthetic-data-simulator)
-- [Machine Learning Model](#-machine-learning-model)
-- [Alerting and Automation](#-alerting-and-automation)
-- [Results: The Fraud Analytics Dashboard](#-results-the-fraud-analytics-dashboard)
-- [Getting Started](#-getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Deployment Steps](#deployment-steps)
-- [Project Structure](#-project-structure)
-- [Limitations](#-limitations)
-- [Future Enhancements](#-future-enhancements)
-- [Team Members](#-team-members)
+## Project Abstract
 
----
+Traditional fraud detection mechanisms, often characterized by batch processing and static rule engines, are ill-equipped to handle the speed and sophistication of modern financial fraud. This project implements a modern alternative: a scalable, event-driven pipeline that leverages serverless computing and machine learning. The system is capable of processing transaction streams, applying a predictive model to score for fraud, and triggering automated alerts, reducing the detection-to-response latency from hours to minutes.
 
-## 🌟 Project Overview
+## Key Architectural Features
 
-Traditional fraud detection systems often rely on batch processing and static rules, making them slow and ineffective against modern, sophisticated fraud schemes. This project addresses these limitations by building a scalable, serverless, and intelligent system capable of detecting fraud within minutes of a transaction occurring.
+-   **High-Throughput, Resilient Ingestion:** Utilizes a self-managed Apache Kafka cluster as a durable buffer, decoupling the data source from the cloud pipeline and ensuring data integrity, with Amazon Kinesis for scalable stream ingestion into AWS.
+-   **Serverless Data Processing:** Employs AWS Glue for serverless ETL and ML inference, automatically scaling resources to match the workload, eliminating the need for server management.
+-   **Optimized Data Warehousing:** A centralized data warehouse in Amazon Redshift is designed with a modified star schema and strategic distribution keys to ensure high-performance analytical queries.
+-   **Intelligent Fraud Detection:** A high-performance XGBoost model serves as the core detection engine, trained to identify complex, non-linear patterns indicative of fraudulent behavior.
+-   **End-to-End Automation:** The entire workflow, from data processing to alerting, is orchestrated by AWS Step Functions, providing robust error handling, state management, and a auditable execution history.
+-   **Secure by Design:** The entire infrastructure is provisioned within a logically isolated Amazon VPC, with strict network controls and IAM roles that adhere to the principle of least privilege.
 
-The pipeline simulates a real-world financial environment, starting with a custom data generator that produces realistic transaction streams. These streams are ingested via a resilient **Apache Kafka** cluster and fed into the AWS ecosystem through **Amazon Kinesis**. Data is then processed by **AWS Glue**, stored in an **Amazon Redshift** data warehouse, and scored by a high-performance **XGBoost** machine learning model.
+## System Architecture and Data Flow
 
-When fraud is detected, an automated, event-driven workflow orchestrated by **AWS Step Functions** triggers an immediate email alert via **AWS Lambda** and **Amazon SNS**. Finally, a comprehensive **Amazon QuickSight** dashboard provides analysts with actionable insights and visualizations of fraud trends.
+The architecture is layered to separate concerns, ensuring modularity and scalability. The data progresses through the system in the following sequence:
 
----
+1.  **Ingestion:**
+    -   An `EC2` instance hosts a Python script that simulates financial transactions and publishes them to a self-hosted `Apache Kafka` cluster.
+    -   A Kafka consumer script reads from the topic and forwards messages to an `Amazon Kinesis Data Stream`.
 
-## ✨ Key Features
+2.  **Staging and Persistence:**
+    -   `Amazon Kinesis Firehose` consumes from the Kinesis stream, batches records into optimally sized files, and delivers them to an `Amazon S3` bucket, creating a partitioned data lake (`YYYY/MM/DD/HH/`).
 
-- **High-Fidelity Synthetic Data:** A custom Python-based data generator that produces realistic, labeled financial transactions, including various fraud personas like Account Takeover, Velocity Attacks, and Synthetic Identity Fraud.
-- **Scalable Ingestion Pipeline:** A robust data ingestion layer using Apache Kafka and Amazon Kinesis to handle high-velocity streaming data.
-- **Serverless ETL and Warehousing:** A centralized data warehouse in Amazon Redshift built with a modified star schema and populated by serverless AWS Glue ETL jobs.
-- **High-Performance ML Model:** An XGBoost model trained to accurately classify transactions, achieving an F1-Score of **90.32%** and a Recall of **97.50%** on the test set.
-- **Automated Orchestration:** An end-to-end, event-driven workflow managed by AWS Step Functions for a hands-off, reliable processing sequence.
-- **Instantaneous Alerting:** A serverless alerting mechanism using AWS Lambda and SNS to notify stakeholders the moment a transaction is flagged as fraudulent.
-- **Interactive Analytics Dashboard:** A dynamic Amazon QuickSight dashboard for monitoring KPIs, investigating fraud patterns, and evaluating model performance.
-- **Secure and Compliant Infrastructure:** All components are deployed within a secure VPC, adhering to the principle of least privilege with meticulous IAM roles and security groups.
+3.  **ETL and Warehousing:**
+    -   An `AWS Glue` ETL job is triggered by the arrival of new data in S3. It cleans, transforms, and structures the raw JSON data, loading it into dimension and fact tables within the `Amazon Redshift` data warehouse.
 
----
+4.  **Machine Learning Inference:**
+    -   A second `AWS Glue` job runs sequentially. It reads the newly cleaned transaction data from Redshift, applies the same feature engineering used in training, and invokes a pre-trained `XGBoost` model to generate fraud predictions. These predictions are written back to a dedicated table in Redshift.
 
-## 🏗️ System Architecture
+5.  **Alerting and Notification:**
+    -   Orchestrated by `AWS Step Functions`, an `AWS Lambda` function queries Redshift for new, high-confidence fraud predictions.
+    -   If detected, the function constructs a detailed alert and publishes it to an `Amazon SNS` topic, which then dispatches an email notification via `Amazon SES`.
 
-The system is designed as a multi-layered, cloud-native architecture on AWS. Each layer performs a specific function, ensuring modularity, scalability, and maintainability.
+6.  **Monitoring and Visualization:**
+    -   `Amazon CloudWatch` provides unified monitoring, collecting logs and performance metrics from all services.
+    -   `Amazon QuickSight` connects directly to Redshift, serving as the business intelligence layer for analysts to monitor trends and investigate alerts.
 
-![System Architecture Diagram](docs/images/architecture.png)
+## Technology Stack
 
-The data flows through five distinct layers:
+-   **Data Ingestion:** Apache Kafka, Amazon Kinesis Data Streams, Amazon Kinesis Firehose
+-   **Data Storage:** Amazon S3 (Data Lake), Amazon Redshift (Data Warehouse)
+-   **Data Processing:** AWS Glue (PySpark)
+-   **Machine Learning:** Python, Pandas, Scikit-learn, XGBoost
+-   **Orchestration:** AWS Step Functions
+-   **Serverless Compute:** AWS Lambda
+-   **Alerting:** Amazon SNS, Amazon SES
+-   **Analytics:** Amazon QuickSight
+-   **Infrastructure & Security:** Amazon VPC, EC2, IAM, CloudWatch, Secrets Manager
 
-1.  **Data Ingestion Layer:** A Python script on an EC2 instance produces synthetic transaction data and publishes it to a self-hosted Kafka cluster. A Kafka consumer forwards these messages to an Amazon Kinesis Data Stream, which reliably delivers them to an S3 data lake via Kinesis Firehose.
-2.  **Data Processing Layer:** An AWS Glue ETL job is triggered, reading the raw data from S3, cleaning and transforming it, and loading it into a Redshift data warehouse. A second Glue job then reads the cleaned data, applies feature engineering, and uses a trained XGBoost model to predict fraud, writing the results to a prediction table in Redshift.
-3.  **Fraud Alerting Layer:** An AWS Lambda function, orchestrated by Step Functions, regularly queries Redshift for new fraudulent transactions. Upon detection, it sends an alert message to an SNS topic.
-4.  **Monitoring Layer:** Amazon CloudWatch automatically collects logs, metrics, and events from all AWS services, providing a centralized hub for operational oversight, debugging, and alarming.
-5.  **Insights Layer:** Amazon QuickSight connects directly to the Redshift data warehouse to visualize key metrics, fraud trends, and model performance on an interactive dashboard.
+## Synthetic Data Generation
 
----
+To train and test the system without using sensitive real-world data, a custom Python simulator was developed. It generates a large-scale, temporally consistent dataset with labeled transactions. The simulator creates user "personas," including several distinct fraud archetypes:
+-   **Account Takeover:** A single, large transaction from a new device/IP.
+-   **Card Testing:** A rapid series of very small transactions to validate stolen card details.
+-   **Velocity Attack:** Multiple high-value transactions across different merchants in a short period.
+-   **Impossible Travel:** Two transactions spaced by a time interval insufficient to travel the geographical distance between them.
+-   **Synthetic Identity:** A new account with "warm-up" transactions followed by a large cash-out.
 
-## 🛠️ Tech Stack
+## Machine Learning Model
 
-- **Cloud Provider:** **Amazon Web Services (AWS)**
-- **Data Streaming:** **Apache Kafka**, **Amazon Kinesis Data Streams**, **Amazon Kinesis Firehose**
-- **Data Processing (ETL):** **AWS Glue** (using PySpark)
-- **Data Warehouse:** **Amazon Redshift**
-- **Data Lake:** **Amazon S3**
-- **Machine Learning:** **XGBoost**, **Scikit-learn**, **Pandas**
-- **Serverless Compute:** **AWS Lambda**
-- **Orchestration & Automation:** **AWS Step Functions**
-- **Alerting & Notification:** **Amazon SNS**, **Amazon SES**
-- **BI & Visualization:** **Amazon QuickSight**
-- **Infrastructure & Security:** **VPC**, **IAM**, **EC2**, **CloudWatch**, **Secrets Manager**
-- **Containerization:** **Docker**, **Docker Compose** (for Kafka cluster)
+A supervised classification model forms the intelligent core of the system.
 
----
+-   **Algorithm:** **XGBoost** (Extreme Gradient Boosting) was selected for its performance, scalability, and native ability to handle class imbalance.
+-   **Evaluation:** The model's performance was rigorously evaluated, prioritizing high recall to minimize missed fraud (false negatives) while maintaining strong precision to reduce false alarms.
+    -   **F1 Score:** `90.32%`
+    -   **Recall:** `97.50%`
+    -   **Precision:** `84.12%`
+    -   **AUC (ROC):** `1.00`
 
-## 🎭 The Synthetic Data Simulator
+## Automated Alerting Workflow
 
-Since real financial data is sensitive and private, this project utilizes a custom-built data simulator in Python. It generates a large-scale dataset (500,000+ transactions) that mimics the patterns of the Egyptian market.
+The system's response mechanism is fully automated and orchestrated by an AWS Step Functions state machine.
 
-The simulator uses a **persona-based model** to create temporally consistent behavior for individual customers. It explicitly embeds and labels transactions from several pre-defined fraud personas, including:
+The state machine executes the following sequence:
+1.  **`Start`**: The workflow is triggered on a schedule or by an event.
+2.  **`RunDataCleaningJob`**: Invokes the first AWS Glue job to perform ETL.
+3.  **`RunMLInferenceJob`**: On success, invokes the second Glue job for ML scoring.
+4.  **`CheckForNewFraud`**: Invokes a Lambda function to query Redshift for newly identified fraudulent transactions that have not yet been alerted.
+5.  **`DispatchAlerts` (Choice State)**: If the previous step finds new fraud cases, the workflow proceeds to send notifications.
+6.  **`End`**: The workflow completes successfully or enters a failed state with logged errors.
 
-- **`FraudPersona_AccountTakeover`**: A single, high-value transaction from a new device/IP.
-- **`FraudPersona_CardTesting`**: A rapid burst of very small-value transactions.
-- **`FraudPersona_VelocityAttack`**: A series of large-value transactions in a short time.
-- **`FraudPersona_ImpossibleTravel`**: A legitimate transaction followed by a fraudulent one from a physically impossible distance away.
-- **`FraudPersona_SyntheticIdentity`**: A new persona that makes a few small "warm-up" transactions before a massive cash-out.
+## Analytics and Visualization
 
----
+An Amazon QuickSight dashboard serves as the primary interface for human analysts. It provides a comprehensive, at-a-glance view of transaction health and fraud patterns through several key visualizations:
 
-## 🤖 Machine Learning Model
+-   **Headline KPIs:** A top-level banner displaying critical, time-filtered metrics: Total Transaction Value (TTV), Total Transaction Count, Fraud Rate (%), and Fraud Loss Value.
+-   **Operational Dashboards:** Donut charts showing transaction approval/decline rates and pivotable bar charts breaking down fraud counts by dimensions such as Merchant Category, Card Type, Device OS, or Issuing Bank.
+-   **Model Performance Monitoring:** Line charts tracking the model's Precision and False Positive Rate (FPR) over time to detect performance degradation.
+-   **Trend Analysis:** Visualizations tracking the volume of fraud within specific high-risk segments (e.g., transactions originating from a VPN or first-time customer-merchant interactions).
 
-The core intelligence of the system is a supervised classification model.
+## Deployment Guide
 
-- **Algorithm:** **XGBoost** (Extreme Gradient Boosting) was chosen for its high performance on tabular data, scalability, and built-in handling for imbalanced datasets.
-- **Feature Engineering:** Features were engineered to capture complex behavioral patterns, such as `txn_per_hour`, `distance_to_merchant`, `is_far_txn`, and binary flags for high-risk events.
-- **Performance:** The model was evaluated on a holdout test set with excellent results, proving its effectiveness.
-  - **F1 Score:** **90.32%**
-  - **Recall:** **97.50%** (Catches 97.5% of all true fraud)
-  - **Precision:** **84.12%** (Over 84% of alerts are for true fraud)
-  - **AUC:** **1.00**
+Deploying this system involves provisioning and configuring multiple interconnected AWS services. The high-level steps are as follows:
 
----
+1.  **Clone the Repository:** Secure a local copy of the project source code.
+2.  **Provision Core Infrastructure:** Set up the networking layer (VPC, Subnets, Security Groups) and the S3 data lake bucket.
+3.  **Deploy Ingestion Layer:** Launch the EC2 instance, install Docker, and start the Kafka cluster using the provided `docker-compose.yml`.
+4.  **Configure Data Services:** Create and configure the Kinesis Data Stream, Kinesis Firehose, and the Redshift Cluster. Ensure network paths and permissions are correctly set.
+5.  **Deploy Serverless Logic:** Create the Glue jobs, Lambda function, and Step Functions state machine, uploading the relevant Python scripts and assigning the appropriate IAM roles.
+6.  **Initiate Data Flow:** Run the `producer.py` script on the EC2 instance to begin generating and streaming data into the pipeline.
+7.  **Connect Visualization Layer:** Establish a connection from Amazon QuickSight to the Redshift cluster and build the analytics dashboard.
 
-## 🚨 Alerting and Automation
-
-The alerting workflow is fully automated using a combination of serverless AWS services.
-
-![State Machine Workflow](docs/images/step_function_workflow.png)
-
-1.  **Orchestration:** An **AWS Step Functions** state machine orchestrates the entire process, running the Glue jobs in sequence.
-2.  **Detection:** After the ML job, a polling loop is initiated. An **AWS Lambda** function queries the Redshift `predicted_fraud` table every 10 seconds for new entries that have not yet been alerted on.
-3.  **Notification:** If new fraudulent transactions are found, the Lambda function formats an HTML email alert and publishes it to an **Amazon SNS** topic.
-4.  **Delivery:** **Amazon SES** (Simple Email Service) is subscribed to the SNS topic and delivers the email to the fraud analysis team. The system then updates the database to prevent duplicate alerts.
-
----
-
-## 📊 Results: The Fraud Analytics Dashboard
-
-The Amazon QuickSight dashboard provides a powerful, at-a-glance interface for analysts to monitor and investigate fraud.
-
-#### Key Performance Indicators (KPIs)
-![KPI Dashboard](docs/images/quicksight_kpi.png)
-
-#### Transaction Status & Fraud by Category
-![Dashboard Charts](docs/images/quicksight_charts.png)
-
-#### Model Performance & Trend Analysis
-![Model Performance Dashboard](docs/images/quicksight_trends.png)
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- An **AWS Account** with sufficient permissions to create the resources mentioned in the Tech Stack.
-- **AWS CLI** configured with your credentials.
-- **Python 3.8+**
-- **Docker** and **Docker Compose**
-- **Git**
-
-### Deployment Steps
-
-1.  **Clone the Repository:**
-    ```bash
-    git clone https://github.com/your-username/financial-fraud-detection.git
-    cd financial-fraud-detection
-    ```
-
-2.  **Setup Networking:**
-    - Deploy the VPC, subnets (public/private), Internet Gateway, and security groups as detailed in the project documentation (or using the provided IaC scripts).
-
-3.  **Launch EC2 & Deploy Kafka:**
-    - Launch a `t3.medium` EC2 instance in the public subnet.
-    - SSH into the instance, install Docker and Docker Compose.
-    - Use the `docker-compose.yml` file in the `/kafka` directory to spin up the 3-broker Kafka cluster.
-
-4.  **Configure AWS Services:**
-    - Create the **Kinesis Data Stream** and **Kinesis Firehose** delivery stream, pointing Firehose to your S3 data lake bucket.
-    - Create the **Amazon Redshift** cluster in the private subnets, ensuring its security group allows access from AWS Glue and QuickSight.
-    - Create the necessary **IAM Roles** for EC2, Glue, Lambda, and Redshift, following the principle of least privilege.
-
-5.  **Deploy Scripts and Models:**
-    - Upload the **AWS Glue ETL and ML inference scripts** to your S3 bucket.
-    - Upload the trained `xgb_fraud_model.pkl` file to S3.
-    - Deploy the **AWS Lambda** function for alerting.
-
-6.  **Orchestrate and Run:**
-    - Define and deploy the **AWS Step Functions** state machine to automate the pipeline.
-    - Run the `producer.py` script on the EC2 instance to start generating and streaming data.
-    - Trigger the Step Functions workflow to process the initial batches of data.
-
-7.  **Visualize:**
-    - Connect **Amazon QuickSight** to your Redshift cluster and build the dashboard based on the `fact_transaction` and `predicted_fraud` tables.
-
----
-
-## 📁 Project Structure
+## Project Structure
 
 ```
 .
 ├── aws_glue_scripts/
-│   ├── etl_cleaning_job.py       # Glue job for ETL and data cleaning
-│   └── ml_inference_job.py       # Glue job for ML inference
+│   ├── etl_cleaning_job.py       # Glue job for ETL and data warehouse loading
+│   └── ml_inference_job.py       # Glue job for feature engineering and ML scoring
 ├── data_simulator/
-│   ├── synthetic_data_generator.py # Main script for generating data
-│   └── profiles/                 # Configuration for fraud personas
+│   └── synthetic_data_generator.py # Script for generating the synthetic dataset
 ├── kafka/
-│   ├── docker-compose.yml        # Docker compose for Kafka cluster
-│   ├── producer.py               # Produces data and sends to Kafka
-│   └── consumer.py               # Consumes from Kafka and sends to Kinesis
+│   ├── docker-compose.yml        # Configuration for the Apache Kafka cluster
+│   ├── producer.py               # Produces data and sends to a Kafka topic
+│   └── consumer.py               # Consumes from Kafka and forwards to Kinesis
 ├── lambda_function/
-│   └── send_fraud_alert.py       # Lambda function for sending email alerts
-├── docs/
-│   ├── Project_Documentation.pdf # The full project report
-│   └── images/                   # Diagrams and screenshots for README
-└── README.md
+│   └── send_fraud_alert.py       # Serverless function for dispatching alerts
+└── documentation/
+    └── Full_Project_Documentation.pdf # The complete academic report
 ```
 
----
+## Limitations and Future Work
 
-## ⚠️ Limitations
+### Limitations
 
-- **Synthetic Data:** The model's performance is based on a synthetic dataset. While realistic, it cannot capture the full complexity and noise of real-world data. Performance in a live production environment may differ.
-- **Near Real-Time vs. True Real-Time:** The architecture's latency is measured in minutes due to the batching nature of Kinesis Firehose and AWS Glue. It is designed for rapid investigation, not for instantaneous transaction blocking.
-- **Static Model:** The model is static and does not automatically retrain. In a real-world scenario, this could lead to performance degradation over time as fraud patterns evolve (concept drift).
+-   **Synthetic Data Reliance:** The system's performance metrics are based on a synthetic dataset, which may not fully capture the nuances of real-world transaction data.
+-   **Near Real-Time Latency:** The architecture is designed for "near real-time" analysis (minutes), not "true real-time" (sub-second) transaction blocking, due to the batching nature of Glue and Kinesis Firehose.
+-   **Static Model Deployment:** The current implementation uses a statically trained model. Without a retraining mechanism, its performance may degrade over time as fraud patterns evolve (concept drift).
 
----
+### Future Enhancements
 
-## 🔮 Future Enhancements
+-   **Streaming Inference:** Augment the architecture with a true streaming component (e.g., Kinesis Data Analytics or a Lambda-based scorer) to enable sub-second inference for real-time transaction blocking.
+-   **MLOps Integration:** Implement an automated MLOps pipeline using services like Amazon SageMaker to monitor for data and model drift, and to trigger automated model retraining and deployment.
+-   **Model Explainability (XAI):** Integrate libraries like SHAP (SHapley Additive exPlanations) to generate human-interpretable reasons for each fraud prediction, aiding analyst investigations and improving model transparency.
 
-- **True Real-Time Inference:** Replace the Glue inference job with a streaming solution using **Kinesis Data Analytics** or **AWS Lambda** to score transactions in sub-seconds.
-- **Automated MLOps Pipeline:** Implement a full MLOps pipeline using **Amazon SageMaker** to automate model retraining, evaluation, and deployment, combating concept drift.
-- **Integrate Model Explainability (XAI):** Use libraries like **SHAP** to provide explanations for each fraud prediction, assisting analysts in their investigations.
-- **Unsupervised Anomaly Detection:** Add an unsupervised model (e.g., Isolation Forest) to the pipeline to detect novel and previously unseen fraud patterns.
+## Contributors
 
----
-
-## 👥 Team Members
-
-- Seif El-Deen Gaber
-- Omar Adel
-- Yasmine Samir
-- Abdelrahman Wael
-- Ahmed Srour
+-   Omar Adel
+-   Seif El-Deen Gaber
+-   Yasmine Samir
+-   Abdelrahman Wael
+-   Ahmed Srour
 
 **Project Supervisor:** Ibrahim Mohamed
