@@ -1,0 +1,9 @@
+# Kafka client
+kafka-python==2.0.2
+
+# AWS SDK
+boto3==1.34.122
+botocore==1.34.122
+
+# Optional: for faster JSON encoding/decoding if desired
+ujson==5.9.0

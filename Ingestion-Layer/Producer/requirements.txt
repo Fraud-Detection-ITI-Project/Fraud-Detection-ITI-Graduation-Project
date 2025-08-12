@@ -1,0 +1,14 @@
+# Core Kafka client library
+kafka-python==2.0.2
+
+# Data handling
+pandas==2.2.2
+numpy==1.26.4
+python-dateutil==2.9.0.post0
+pytz==2024.1
+
+# JSON handling (standard library provides json, but ujson can speed things up)
+ujson==5.9.0
+
+# Optional: If you want progress bars for batch sends
+tqdm==4.66.4
