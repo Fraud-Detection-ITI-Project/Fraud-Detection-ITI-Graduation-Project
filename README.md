@@ -43,29 +43,38 @@ The architecture is designed as a modular, five-layer pipeline, visualized below
 
 ```mermaid
 graph TD
+
     subgraph "1. Data Ingestion Layer"
-        A1[EC2 (Kafka Producer)] --> A2[S3 Bucket<br/>Temp Storage]
-        A2 --> A3[Amazon Kinesis<br/>Consumer]
-        A3 --> A4[S3 Bucket<br/>Central Data Lake]
+        A1["EC2 (Kafka Producer)"]
+        A2["S3 Bucket<br/>Temp Storage"]
+        A3["Amazon Kinesis<br/>Consumer"]
+        A4["S3 Bucket<br/>Central Data Lake"]
+        A1 --> A2 --> A3 --> A4
     end
 
     subgraph "2. Data Processing Layer"
-        B1[AWS Glue<br/>Data Cleaning] --> B2[Amazon Redshift<br/>Table 1: Cleaned Data]
-        B2 --> B3[AWS Glue<br/>ML Model]
+        B1["AWS Glue<br/>Data Cleaning"]
+        B2["Amazon Redshift<br/>Table 1: Cleaned Data"]
+        B3["AWS Glue<br/>ML Model"]
+        B1 --> B2 --> B3
     end
 
     subgraph "3. Fraud Alerting Layer"
-        C1[Amazon Redshift<br/>Table 2: Anomalies] --> C2[AWS Lambda<br/>Detect New Fraud]
-        C2 -- SNS Trigger --> C3[Amazon SNS<br/>Notification Topic]
-        C3 --> C4[Email Fraud Notification]
+        C1["Amazon Redshift<br/>Table 2: Anomalies"]
+        C2["AWS Lambda<br/>Detect New Fraud"]
+        C3["Amazon SNS<br/>Notification Topic"]
+        C4["Email Fraud Notification"]
+        C1 --> C2 -- SNS Trigger --> C3 --> C4
     end
 
     subgraph "4. Monitoring Layer"
-        D1[Amazon CloudWatch<br/>Logs From All Services] --> D2[Amazon Redshift<br/>Table 3: Storage for Logs]
+        D1["Amazon CloudWatch<br/>Logs From All Services"]
+        D2["Amazon Redshift<br/>Table 3: Storage for Logs"]
+        D1 --> D2
     end
 
     subgraph "5. Insights Layer"
-        E1[Amazon QuickSight<br/>Visualization Dashboard]
+        E1["Amazon QuickSight<br/>Visualization Dashboard"]
     end
 
     %% --- Inter-Layer Connections ---
