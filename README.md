@@ -34,40 +34,90 @@ Traditional fraud detection mechanisms, often characterized by batch processing 
 -   **Serverless Data Processing:** Employs AWS Glue for serverless ETL and ML inference, automatically scaling resources to match the workload, eliminating the need for server management.
 -   **Optimized Data Warehousing:** A centralized data warehouse in Amazon Redshift is designed with a modified star schema and strategic distribution keys to ensure high-performance analytical queries.
 -   **Intelligent Fraud Detection:** A high-performance XGBoost model serves as the core detection engine, trained to identify complex, non-linear patterns indicative of fraudulent behavior.
--   **End-to-End Automation:** The entire workflow, from data processing to alerting, is orchestrated by AWS Step Functions, providing robust error handling, state management, and a auditable execution history.
+-   **End-to-End Automation:** The entire workflow, from data processing to alerting, is orchestrated by AWS Step Functions, providing robust error handling, state management, and an auditable execution history.
 -   **Secure by Design:** The entire infrastructure is provisioned within a logically isolated Amazon VPC, with strict network controls and IAM roles that adhere to the principle of least privilege.
 
 ## System Architecture and Data Flow
 
-The architecture is designed with a multi-layered approach on AWS, ensuring a clear separation of concerns for data ingestion, processing, alerting, and analysis. The following is a step-by-step description of the data flow through each logical layer of the pipeline.
+The architecture is designed as a modular, five-layer pipeline, visualized below. Each layer handles a specific stage of the data lifecycle, from initial capture to actionable insight.
+
+```mermaid
+graph TD
+    subgraph "1. Data Ingestion Layer"
+        A1[EC2 (Kafka Producer)] --> A2[S3 Bucket<br/>Temp Storage]
+        A2 --> A3[Amazon Kinesis<br/>Consumer]
+        A3 --> A4[S3 Bucket<br/>Central Data Lake]
+    end
+
+    subgraph "2. Data Processing Layer"
+        B1[AWS Glue<br/>Data Cleaning] --> B2[Amazon Redshift<br/>Table 1: Cleaned Data]
+        B2 --> B3[AWS Glue<br/>ML Model]
+    end
+
+    subgraph "3. Fraud Alerting Layer"
+        C1[Amazon Redshift<br/>Table 2: Anomalies] --> C2[AWS Lambda<br/>Detect New Fraud]
+        C2 -- SNS Trigger --> C3[Amazon SNS<br/>Notification Topic]
+        C3 --> C4[Email Fraud Notification]
+    end
+
+    subgraph "4. Monitoring Layer"
+        D1[Amazon CloudWatch<br/>Logs From All Services] --> D2[Amazon Redshift<br/>Table 3: Storage for Logs]
+    end
+
+    subgraph "5. Insights Layer"
+        E1[Amazon QuickSight<br/>Visualization Dashboard]
+    end
+
+    %% --- Inter-Layer Connections ---
+    A4 --> B1
+    B3 --> C1
+    B2 --> E1
+    C1 --> E1
+
+    %% --- Styling ---
+    classDef storage fill:#D1F2EB,stroke:#007A5E,stroke-width:2px;
+    classDef compute fill:#FADBD8,stroke:#C0392B,stroke-width:2px;
+    classDef serverless fill:#D6EAF8,stroke:#2E86C1,stroke-width:2px;
+    classDef analytics fill:#FCF3CF,stroke:#F1C40F,stroke-width:2px;
+    classDef messaging fill:#E8DAEF,stroke:#8E44AD,stroke-width:2px;
+
+    class A1,C2 compute;
+    class A2,A4,B2,C1,D2 storage;
+    class B1,B3 serverless;
+    class A3,C3,C4 messaging;
+    class D1,E1 analytics;
+```
+
+---
 
 #### 1. Data Ingestion Layer
-This layer is responsible for capturing raw transaction events and staging them in a central data lake.
--   **Data Generation:** The process originates on an **`EC2`** instance where a producer application, integrated with **`Apache Kafka`**, generates a stream of transaction data.
--   **Stream Consumption & Delivery:** A consumer process, powered by **`Amazon Kinesis`**, ingests this stream. It processes the events and delivers them to a final destination.
--   **Central Data Lake:** The processed stream is stored in an **`Amazon S3`** bucket, which serves as the durable, scalable, and centralized data lake for all raw transactional data.
+This layer is responsible for capturing raw transaction events and durably storing them in a central location.
+-   **EC2 (Kafka Producer):** The process starts on an **`EC2`** instance where a producer application generates a high-velocity stream of transaction data and publishes it to a Kafka topic.
+-   **Temp Storage (S3):** The initial stream is temporarily stored in an **`Amazon S3`** bucket.
+-   **Stream Consumption (Kinesis):** **`Amazon Kinesis`** acts as a consumer, ingesting the data from the temporary S3 storage for processing within the AWS ecosystem.
+-   **Central Data Lake (S3):** Kinesis delivers the raw data to a final **`Amazon S3`** bucket, which serves as the permanent, central data lake for the entire system.
 
 #### 2. Data Processing Layer
-This layer transforms the raw data into a structured format and applies the machine learning model to score for fraud.
--   **ETL and Data Cleaning:** An **`AWS Glue`** job is initiated, reading the raw data from the central S3 data lake. This serverless job cleans, validates, and transforms the data into a structured schema.
--   **Structured Data Storage:** The cleaned, structured data is loaded into a dedicated table (`Redshift Table 1`) within an **`Amazon Redshift`** data warehouse. This table acts as the primary source of truth for all transactions.
--   **Machine Learning Inference:** A second **`AWS Glue`** job reads the cleaned data from Redshift. It performs feature engineering and applies a pre-trained ML model to generate a fraud prediction for each transaction.
+This layer transforms the raw data into an analysis-ready format and applies the fraud detection model.
+-   **Data Cleaning (AWS Glue):** An **`AWS Glue`** ETL job is triggered by the arrival of new data in the central data lake. This serverless job cleans, validates, and transforms the raw data into a structured schema.
+-   **Structured Storage (Amazon Redshift):** The cleaned data is loaded into `Table 1` in an **`Amazon Redshift`** data warehouse, serving as the single source of truth for transactions.
+-   **ML Inference (AWS Glue):** A second **`AWS Glue`** job reads the cleaned data from Redshift, performs feature engineering, and uses a pre-trained machine learning model to generate fraud predictions.
 
 #### 3. Fraud Alerting Layer
-This layer is an event-driven workflow that triggers immediate notifications upon the detection of fraud.
--   **Anomaly Storage:** The fraud predictions from the ML model are written to a separate "anomalies" table (`Redshift Table 2`) in Redshift.
--   **Serverless Detection:** An **`AWS Lambda`** function is triggered to query this table for newly identified fraudulent transactions.
--   **Notification Dispatch:** Upon finding a new fraud case, the Lambda function triggers an **`Amazon SNS`** (Simple Notification Service) topic. SNS then instantly distributes the alert as an **Email Fraud Notification** to subscribed stakeholders.
+This event-driven layer is responsible for triggering immediate notifications upon fraud detection.
+-   **Anomaly Storage (Amazon Redshift):** The fraud predictions from the ML model are written to `Table 2` in Redshift, which stores all identified anomalies.
+-   **Serverless Detection (AWS Lambda):** An **`AWS Lambda`** function is triggered to query the anomalies table for newly detected fraudulent transactions.
+-   **Notification Dispatch (Amazon SNS):** Upon finding a new case, the Lambda function publishes a message to an **`Amazon SNS`** topic, which instantly distributes an **Email Fraud Notification** to subscribed stakeholders.
 
 #### 4. Monitoring Layer
-This layer provides centralized operational visibility across the entire pipeline.
--   **Log Aggregation:** **`Amazon CloudWatch`** automatically collects logs, metrics, and events from all services in the architecture (EC2, Kinesis, Glue, Redshift, Lambda).
--   **Log Archiving:** For long-term analysis or compliance, aggregated logs from CloudWatch can be loaded into a dedicated table (`Redshift Table 3`) for structured querying.
+This layer provides centralized operational visibility and logging for the entire pipeline.
+-   **Log Aggregation (Amazon CloudWatch):** **`Amazon CloudWatch`** serves as the central hub, collecting logs, metrics, and events from all other services in the pipeline (EC2, Kinesis, Glue, Redshift, Lambda).
+-   **Log Archiving (Amazon Redshift):** For long-term analysis and structured querying, the aggregated logs can be loaded from CloudWatch into `Table 3` in Redshift.
 
 #### 5. Insights Layer
-This is the business intelligence (BI) layer where analysts interact with the data.
--   **Data Visualization:** **`Amazon QuickSight`** connects directly to the Amazon Redshift data warehouse.
--   **Interactive Dashboards:** Analysts use QuickSight to build and view dashboards, visualizing key metrics from the cleaned transaction data (`Redshift Table 1`) and the fraud predictions (`Redshift Table 2`). This enables trend analysis, investigation of alerts, and monitoring of the model's performance.
+This is the business intelligence (BI) layer where analysts interact with the processed data.
+-   **Visualization (Amazon QuickSight):** **`Amazon QuickSight`** connects directly to the Amazon Redshift data warehouse.
+-   **Interactive Dashboards:** Analysts use QuickSight to query both the cleaned transaction data (`Table 1`) and the fraud predictions (`Table 2`) to build dashboards. This enables real-time trend analysis, investigation of alerts, and monitoring of the ML model's performance.
 
 ## Technology Stack
 
