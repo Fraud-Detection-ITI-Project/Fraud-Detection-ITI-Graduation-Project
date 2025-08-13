@@ -1,0 +1,248 @@
+import sys
+import logging
+from awsglue.transforms import *
+from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+from awsglue.context import GlueContext
+from awsglue.job import Job
+from awsglue import DynamicFrame
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+def sparkSqlQuery(glueContext, query, mapping, transformation_ctx) -> DynamicFrame:
+    logger.info(f"Executing Spark SQL query for transformation: {transformation_ctx}")
+    logger.debug(f"Query: {query}")
+    logger.info(f"Input mappings: {list(mapping.keys())}")
+    
+    for alias, frame in mapping.items():
+        record_count = frame.count()
+        logger.info(f"Creating temp view '{alias}' with {record_count} records")
+        frame.toDF().createOrReplaceTempView(alias)
+    
+    result = spark.sql(query)
+    result_df = DynamicFrame.fromDF(result, glueContext, transformation_ctx)
+    result_count = result_df.count()
+    logger.info(f"Spark SQL query completed for {transformation_ctx}. Output records: {result_count}")
+    
+    return result_df
+
+logger.info("Starting AWS Glue ETL job execution")
+
+args = getResolvedOptions(sys.argv, ['JOB_NAME'])
+logger.info(f"Job name: {args['JOB_NAME']}")
+
+sc = SparkContext()
+glueContext = GlueContext(sc)
+spark = glueContext.spark_session
+job = Job(glueContext)
+job.init(args['JOB_NAME'], args)
+logger.info("Spark context and Glue context initialized successfully")
+
+# Script generated for node Amazon S3
+logger.info("Starting to read data from Amazon S3")
+logger.info("S3 path: s3://streaming-data-central/2025/")
+
+#AmazonS3_node1754497653820 = glueContext.create_dynamic_frame.from_options(format_options={"quoteChar": "\"", "withHeader": True, "separator": ","}, connection_type="s3", format="csv", connection_options={"paths": ["s3://streaming-data-central/transactions_egypt_centric_final_v7.csv"], "recurse": True}, transformation_ctx="AmazonS3_node1754497653820")
+AmazonS3_node1754497653820 = glueContext.create_dynamic_frame.from_options(format_options={"multiLine": "false"}, connection_type="s3", format="json", connection_options={"paths": ["s3://streaming-data-central/2025/"], "recurse": True}, transformation_ctx="AmazonS3_node1754497653820")
+
+
+source_record_count = AmazonS3_node1754497653820.count()
+logger.info(f"Successfully loaded {source_record_count} records from S3")
+
+# Script generated for node Dim_card
+logger.info("Starting transformation for Dim_card")
+SqlQuery0 = '''
+select distinct
+    card_number_hash,          
+    card_type,                  
+    issuing_bank_name,          
+    current_timestamp() AS start_date,
+    TRUE AS is_current,
+    to_timestamp('9999-12-31 23:59:59', 'yyyy-MM-dd HH:mm:ss') as end_date
+from myDataSource
+'''
+Dim_card_node1754497713569 = sparkSqlQuery(glueContext, query = SqlQuery0, mapping = {"myDataSource":AmazonS3_node1754497653820}, transformation_ctx = "Dim_card_node1754497713569")
+logger.info("Dim_card transformation completed")
+
+# Script generated for node Dim_merchant
+logger.info("Starting transformation for Dim_merchant")
+SqlQuery1 = '''
+SELECT 
+  DISTINCT  
+  merchant_id ,
+  merchant_name ,
+  merchant_category ,
+  CAST(merchant_latitude AS DOUBLE) AS merchant_latitude,
+  CAST(merchant_longitude AS DOUBLE) AS merchant_longitude
+FROM myDataSource
+'''
+Dim_merchant_node1754497661676 = sparkSqlQuery(glueContext, query = SqlQuery1, mapping = {"myDataSource":AmazonS3_node1754497653820}, transformation_ctx = "Dim_merchant_node1754497661676")
+logger.info("Dim_merchant transformation completed")
+
+# Script generated for node Drop Duplicates
+DropDuplicates_node1754672742247 =  DynamicFrame.fromDF(Dim_merchant_node1754497661676.toDF().dropDuplicates(["merchant_id"]), glueContext, "DropDuplicates_node1754672742247")
+
+# Script generated for node Dim_customer
+logger.info("Starting transformation for Dim_customer")
+SqlQuery2 = '''
+SELECT distinct  
+  customer_id,
+  customer_name,
+  customer_email,
+  customer_email_domain,
+  cast(customer_tenure_days as INT) as customer_tenure_days,
+  cast(customer_address_change_days as INT) as customer_address_change_days,
+  current_timestamp() as start_date,
+  to_timestamp('9999-12-31 00:00:00', 'yyyy-MM-dd HH:mm:ss') as end_date,
+  TRUE as is_current 
+
+ FROM myDataSource s
+'''
+Dim_customer_node1754497659557 = sparkSqlQuery(glueContext, query = SqlQuery2, mapping = {"myDataSource":AmazonS3_node1754497653820}, transformation_ctx = "Dim_customer_node1754497659557")
+logger.info("Dim_customer transformation completed")
+
+# Script generated for node Dim_device
+logger.info("Starting transformation for Dim_device")
+SqlQuery3 = '''
+select distinct
+    device_id,           
+    device_os,          
+    user_agent,         
+    current_timestamp() AS start_date,
+    TRUE AS is_current,
+     to_timestamp('9999-12-31 23:59:59', 'yyyy-MM-dd HH:mm:ss') as end_date
+  
+
+from myDataSource
+'''
+Dim_device_node1754497680942 = sparkSqlQuery(glueContext, query = SqlQuery3, mapping = {"myDataSource":AmazonS3_node1754497653820}, transformation_ctx = "Dim_device_node1754497680942")
+logger.info("Dim_device transformation completed")
+
+# Script generated for write to trgt_card
+logger.info("Starting write operation to Redshift table: public.dim_card")
+trgt_card_node1754502613157 = glueContext.write_dynamic_frame.from_options(frame=Dim_card_node1754497713569, connection_type="redshift", connection_options={"redshiftTmpDir": "s3://aws-glue-assets-498722511384-eu-north-1/temporary/", "useConnectionProperties": "true", "dbtable": "public.dim_card", "connectionName": "Jdbc connection", "preactions": "CREATE TABLE IF NOT EXISTS public.dim_card (transaction_id VARCHAR, transaction_timestamp VARCHAR, transaction_amount VARCHAR, currency VARCHAR, transaction_type VARCHAR, transaction_status VARCHAR, decline_reason VARCHAR, transaction_hour_of_day VARCHAR, customer_id VARCHAR, customer_name VARCHAR, customer_email VARCHAR, customer_email_domain VARCHAR, customer_tenure_days VARCHAR, customer_address_change_days VARCHAR, customer_latitude VARCHAR, customer_longitude VARCHAR, card_number_hash VARCHAR, card_type VARCHAR, issuing_bank_name VARCHAR, card_entry_method VARCHAR, cvv_match_result VARCHAR, merchant_id VARCHAR, merchant_name VARCHAR, merchant_category VARCHAR, merchant_latitude VARCHAR, merchant_longitude VARCHAR, merchant_risk_score VARCHAR, ip_address VARCHAR, ip_proxy_type VARCHAR, device_id VARCHAR, device_os VARCHAR, user_agent VARCHAR, is_international VARCHAR, distance_from_home_km VARCHAR, distance_from_last_txn_km VARCHAR, time_since_last_txn_sec VARCHAR, is_first_time_customer_merchant VARCHAR, is_fraud VARCHAR);"}, transformation_ctx="trgt_card_node1754502613157")
+logger.info("Successfully wrote data to public.dim_card")
+
+# Script generated for write to trgt_merchant
+logger.info("Starting write operation to Redshift table: public.dim_merchant")
+trgt_merchant_node1754502614455 = glueContext.write_dynamic_frame.from_options(frame=DropDuplicates_node1754672742247, connection_type="redshift", connection_options={"redshiftTmpDir": "s3://aws-glue-assets-498722511384-eu-north-1/temporary/", "useConnectionProperties": "true", "dbtable": "public.dim_merchant", "connectionName": "Jdbc connection", "preactions": "CREATE TABLE IF NOT EXISTS public.dim_merchant (merchant_id VARCHAR, merchant_name VARCHAR, merchant_category VARCHAR, merchant_latitude DOUBLE PRECISION, merchant_longitude DOUBLE PRECISION);"}, transformation_ctx="trgt_merchant_node1754502614455")
+logger.info("Successfully wrote data to public.dim_merchant")
+
+# Script generated for write to trgt_customer
+logger.info("Starting write operation to Redshift table: public.dim_customer")
+trgt_customer_node1754502603073 = glueContext.write_dynamic_frame.from_options(frame=Dim_customer_node1754497659557, connection_type="redshift", connection_options={"redshiftTmpDir": "s3://aws-glue-assets-498722511384-eu-north-1/temporary/", "useConnectionProperties": "true", "dbtable": "public.dim_customer", "connectionName": "Jdbc connection", "preactions": "CREATE TABLE IF NOT EXISTS public.dim_customer (customer_id VARCHAR, customer_name VARCHAR, customer_email VARCHAR, customer_email_domain VARCHAR, customer_tenure_days INTEGER, customer_address_change_days INTEGER, start_date TIMESTAMP, end_date TIMESTAMP, is_current BOOLEAN);"}, transformation_ctx="trgt_customer_node1754502603073")
+logger.info("Successfully wrote data to public.dim_customer")
+
+# Script generated for write to trgt_device
+logger.info("Starting write operation to Redshift table: public.dim_device")
+trgt_device_node1754502611959 = glueContext.write_dynamic_frame.from_options(frame=Dim_device_node1754497680942, connection_type="redshift", connection_options={"redshiftTmpDir": "s3://aws-glue-assets-498722511384-eu-north-1/temporary/", "useConnectionProperties": "true", "dbtable": "public.dim_device", "connectionName": "Jdbc connection", "preactions": "CREATE TABLE IF NOT EXISTS public.dim_device (device_id VARCHAR, device_os VARCHAR, user_agent VARCHAR, start_date TIMESTAMP, is_current BOOLEAN, end_date TIMESTAMP);"}, transformation_ctx="trgt_device_node1754502611959")
+logger.info("Successfully wrote data to public.dim_device")
+
+logger.info("All dimension tables have been successfully loaded")
+
+# Script generated for read src_Dimtime
+logger.info("Reading dimension table: public.dim_time")
+#src_Dimtime_node1754519480132 = glueContext.create_dynamic_frame.from_options(connection_type="redshift", connection_options={"sampleQuery": "select  time_SK , time_in_12_hour_format from public.dim_time", "redshiftTmpDir": "s3://aws-glue-assets-498722511384-eu-north-1/temporary/", "useConnectionProperties": "true", "connectionName": "Jdbc connection"}, transformation_ctx="src_Dimtime_node1754519480132")
+src_Dimtime_node1754519480132 = glueContext.create_dynamic_frame.from_options(connection_type="redshift", connection_options={"redshiftTmpDir": "s3://aws-glue-assets-498722511384-eu-north-1/temporary/", "useConnectionProperties": "true", "dbtable": "public.dim_time", "connectionName": "Jdbc connection"}, transformation_ctx="src_Dimtime_node1754519480132")
+
+# Script generated for node src_Dimdate
+time_records = src_Dimtime_node1754519480132.count()
+logger.info(f"Loaded {time_records} records from public.dim_time")
+
+# Script generated for read src_Dimdate
+logger.info("Reading dimension table: public.dim_date")
+src_Dimdate_node1754519483633 = glueContext.create_dynamic_frame.from_options(connection_type="redshift", connection_options={"redshiftTmpDir": "s3://aws-glue-assets-498722511384-eu-north-1/temporary/", "useConnectionProperties": "true", "dbtable": "public.dim_date", "connectionName": "Jdbc connection"}, transformation_ctx="src_Dimdate_node1754519483633")
+date_records = src_Dimdate_node1754519483633.count()
+logger.info(f"Loaded {date_records} records from public.dim_date")
+
+# Script generated for read src_Dimdevice
+logger.info("Reading dimension table: public.dim_device")
+src_Dimdevice_node1754519488867 = glueContext.create_dynamic_frame.from_options(connection_type="redshift", connection_options={"redshiftTmpDir": "s3://aws-glue-assets-498722511384-eu-north-1/temporary/", "useConnectionProperties": "true", "dbtable": "public.dim_device", "connectionName": "Jdbc connection"}, transformation_ctx="src_Dimdevice_node1754519488867")
+device_records = src_Dimdevice_node1754519488867.count()
+logger.info(f"Loaded {device_records} records from public.dim_device")
+
+# Script generated for read src_Dimmerchant
+logger.info("Reading dimension table: public.dim_merchant")
+src_Dimmerchant_node1754519491962 = glueContext.create_dynamic_frame.from_options(connection_type="redshift", connection_options={"redshiftTmpDir": "s3://aws-glue-assets-498722511384-eu-north-1/temporary/", "useConnectionProperties": "true", "dbtable": "public.dim_merchant", "connectionName": "Jdbc connection"}, transformation_ctx="src_Dimmerchant_node1754519491962")
+merchant_records = src_Dimmerchant_node1754519491962.count()
+logger.info(f"Loaded {merchant_records} records from public.dim_merchant")
+
+# Script generated for read src_Dimcustomer
+logger.info("Reading dimension table: public.dim_customer")
+src_Dimcustomer_node1754519496650 = glueContext.create_dynamic_frame.from_options(connection_type="redshift", connection_options={"redshiftTmpDir": "s3://aws-glue-assets-498722511384-eu-north-1/temporary/", "useConnectionProperties": "true", "dbtable": "public.dim_customer", "connectionName": "Jdbc connection"}, transformation_ctx="src_Dimcustomer_node1754519496650")
+customer_records = src_Dimcustomer_node1754519496650.count()
+logger.info(f"Loaded {customer_records} records from public.dim_customer")
+
+# Script generated for read src_Dimcard
+logger.info("Reading dimension table: public.dim_card")
+src_Dimcard_node1754519487752 = glueContext.create_dynamic_frame.from_options(connection_type="redshift", connection_options={"redshiftTmpDir": "s3://aws-glue-assets-498722511384-eu-north-1/temporary/", "useConnectionProperties": "true", "dbtable": "public.dim_card", "connectionName": "Jdbc connection"}, transformation_ctx="src_Dimcard_node1754519487752")
+card_records = src_Dimcard_node1754519487752.count()
+logger.info(f"Loaded {card_records} records from public.dim_card")
+
+logger.info("All dimension tables have been successfully read for fact table creation")
+
+# Script generated for fact table  SQL Query
+logger.info("Starting fact table transformation")
+logger.info("Performing joins between transaction data and all dimension tables")
+SqlQuery4 = '''
+select 
+tr.transaction_id,                           -- Degenerate dimension
+    cu.customer_SK,
+    m.merchant_SK,
+    ca.card_SK,
+    d.date_SK,
+    t.time_SK,
+    dev.device_SK,
+
+    cast(tr.transaction_amount as double) as transaction_amount, 
+    cast(tr.distance_from_home_km as double) as distance_from_home_km,
+    cast(tr.distance_from_last_txn_km as double) as distance_from_last_txn_km,
+    cast(tr.time_since_last_txn_sec as bigint) as time_since_last_txn_sec,
+    cast(tr.merchant_risk_score as double) as merchant_risk_score ,
+    cast(tr.customer_latitude as double) as transaction_latitude,
+    cast(tr.customer_longitude as double) as transaction_longitude,
+    tr.card_entry_method,
+    tr.ip_address,
+    tr.cvv_match_result,
+    
+    -- Attributes
+    tr.transaction_type,
+    tr.transaction_status,
+    cast(tr.is_fraud as boolean) as is_fraud ,
+    cast(tr.is_first_time_customer_merchant as boolean) as is_first_time_customer_merchant,
+    current_timestamp() as load_date
+from tr 
+ INNER JOIN cu ON tr.customer_id = cu.customer_id
+ INNER JOIN ca  ON tr.card_number_hash = ca.card_number_hash
+ INNER JOIN dev ON tr.device_id = dev.device_id
+ INNER JOIN m ON tr.merchant_id = m.merchant_id
+-- For Date and Time dimensions, you often need to transform the source timestamp to match the dimension's key.
+ INNER JOIN d ON TO_DATE(tr.transaction_timestamp) = d.full_date
+ INNER JOIN t ON date_format(tr.transaction_timestamp, 'hh:mm:ss a') = t.time_in_12_hour_format;
+
+'''
+SQLQuery_node1754522511479 = sparkSqlQuery(glueContext, query = SqlQuery4, mapping = {"cu":src_Dimcustomer_node1754519496650, "m":src_Dimmerchant_node1754519491962, "dev":src_Dimdevice_node1754519488867, "ca":src_Dimcard_node1754519487752, "d":src_Dimdate_node1754519483633, "t":src_Dimtime_node1754519480132, "tr":AmazonS3_node1754497653820}, transformation_ctx = "SQLQuery_node1754522511479")
+logger.info("Fact table transformation completed successfully")
+
+# Script generated for write to fact table
+logger.info("Starting write operation to Redshift fact table: public.fact_transaction")
+fact_record_count = SQLQuery_node1754522511479.count()
+logger.info(f"Writing {fact_record_count} records to fact table")
+
+fact_node1754524168550 = glueContext.write_dynamic_frame.from_options(frame=SQLQuery_node1754522511479, connection_type="redshift", connection_options={"redshiftTmpDir": "s3://aws-glue-assets-498722511384-eu-north-1/temporary/", "useConnectionProperties": "true", "dbtable": "public.fact_transaction", "connectionName": "Jdbc connection", "preactions": "CREATE TABLE IF NOT EXISTS public.fact_transaction (transaction_id VARCHAR, customer_SK VARCHAR, merchant_SK VARCHAR, card_SK VARCHAR, date_SK INTEGER, time_SK INTEGER, device_SK VARCHAR, transaction_amount DOUBLE PRECISION, distance_from_home_km DOUBLE PRECISION, distance_from_last_txn_km DOUBLE PRECISION, time_since_last_txn_sec VARCHAR, merchant_risk_score DOUBLE PRECISION, transaction_latitude DOUBLE PRECISION, transaction_longitude DOUBLE PRECISION, card_entry_method VARCHAR, ip_address VARCHAR, cvv_match_result VARCHAR, transaction_type VARCHAR, transaction_status VARCHAR, is_fraud BOOLEAN, is_first_time_customer_merchant BOOLEAN, load_date TIMESTAMP);"}, transformation_ctx="fact_node1754524168550")
+
+logger.info("Successfully wrote data to public.fact_transaction")
+logger.info("ETL job execution completed successfully")
+
+# Log summary statistics
+logger.info("=== ETL Job Summary ===")
+logger.info(f"Source records processed: {source_record_count}")
+logger.info(f"Dimension records - Time: {time_records}, Date: {date_records}")
+logger.info(f"Dimension records - Customer: {customer_records}, Merchant: {merchant_records}")
+logger.info(f"Dimension records - Card: {card_records}, Device: {device_records}")
+logger.info(f"Fact table records created: {fact_record_count}")
+logger.info("========================")
+
+job.commit()
