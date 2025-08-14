@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/Data%20Processing-AWS%20Glue-DC143C?logo=amazon-aws&logoColor=white" alt="AWS Glue">
   <img src="https://img.shields.io/badge/Data%20Warehouse-Amazon%20Redshift-DC143C?logo=amazon-redshift&logoColor=white" alt="Redshift">
   <img src="https://img.shields.io/badge/Monitoring-CloudWatch-DC143C?logo=amazon-aws&logoColor=white" alt="CloudWatch">
-  <img src="https://img.shields.io/badge/Alerting-Amazon%20SNS-DC143C?logo=amazon-aws&logoColor=white" alt="SNS">
+  <img src="https://img.shields.io/badge/Alerting-Amazon%20SNS-DC143C?logo=amazon-aws&logoColor=white" alt="SES">
   <img src="https://img.shields.io/badge/Serverless-AWS%20Lambda-DC143C?logo=awslambda&logoColor=white" alt="Lambda">
   <img src="https://img.shields.io/badge/Language-Python-3776AB?logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/ML%20Algorithm-XGBoost-DC143C" alt="XGBoost">
@@ -61,7 +61,7 @@ Traditional fraud detection mechanisms, often characterized by batch processing 
 
 1. **Data Ingestion Layer:** Captures raw transaction data from an EC2 instance acting as a Kafka Producer. Data is temporarily staged in S3 before being consumed by Amazon Kinesis and stored in a Central Data Lake (S3).
 2. **Data Processing Layer:** AWS Glue jobs clean and transform data, load it into Redshift, and run ML inference using the XGBoost model.
-3. **Fraud Alerting Layer:** Predictions are stored in Redshift, then AWS Lambda checks for new anomalies and triggers Amazon SNS to send fraud alerts via email.
+3. **Fraud Alerting Layer:** Predictions are stored in Redshift, then AWS Lambda checks for new anomalies and triggers Amazon SES to send fraud alerts via email.
 4. **Monitoring Layer:** CloudWatch collects logs and metrics from all services, archived into Redshift for analysis.
 5. **Insights Layer:** Amazon QuickSight connects to Redshift to provide interactive fraud analytics dashboards.
 
@@ -73,7 +73,7 @@ Traditional fraud detection mechanisms, often characterized by batch processing 
 - **Machine Learning:** Python, Pandas, Scikit-learn, XGBoost
 - **Orchestration:** AWS Step Functions
 - **Serverless Compute:** AWS Lambda
-- **Alerting:** Amazon SNS, Amazon SES
+- **Alerting:** Amazon SES
 - **Analytics:** Amazon QuickSight
 - **Infrastructure & Security:** Amazon VPC, EC2, IAM, CloudWatch, Secrets Manager
 
