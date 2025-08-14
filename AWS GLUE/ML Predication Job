@@ -1,0 +1,244 @@
+import pandas as pd
+import boto3
+import joblib
+import psycopg2
+import numpy as np
+from io import StringIO
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+import uuid
+import os
+from datetime import datetime, timedelta
+
+# --- Redshift config ---
+redshift_config = {
+    "host": "****************************************************",
+    "port": 5439,
+    "user": "awsuser",
+    "password": "",
+    "dbname": "fraud_dwh",
+}
+input_table = "fact_transaction"
+output_table = "predicted_fraud"
+checkpoint_table = "fraud_prediction_checkpoint"
+
+# --- S3 config ---
+s3_bucket = 'fraud-model'
+model_key = 'xgb_fraud_model.pkl_4'
+output_key_prefix = 'predictions/'
+region = 'eu-north-1'
+iam_role = 'arn:aws:iam::498722511384:role/Redshift-S3-Access-Role'
+
+s3 = boto3.client('s3')
+
+def get_last_checkpoint(conn):
+    """Get the last processed checkpoint (timestamp only)"""
+    cur = conn.cursor()
+    try:
+        cur.execute(f"""
+            SELECT last_processed_timestamp, processed_count
+            FROM {checkpoint_table}
+            WHERE job_name = 'fraud_prediction'
+        """)
+        result = cur.fetchone()
+        if result:
+            return result[0], result[1]
+        else:
+            return None, 0
+    except Exception as e:
+        print(f"⚠️ Warning getting checkpoint: {e}")
+        return None, 0
+    finally:
+        cur.close()
+
+def update_checkpoint(conn, last_timestamp, processed_count):
+    """Update the checkpoint with latest processed timestamp"""
+    cur = conn.cursor()
+    try:
+        # Fast UPSERT for Redshift
+        cur.execute(f"DELETE FROM {checkpoint_table} WHERE job_name = 'fraud_prediction'")
+        cur.execute(f"""
+        INSERT INTO {checkpoint_table} 
+        (job_name, last_processed_timestamp, processed_count)
+        VALUES (%s, %s, %s)
+        """, ('fraud_prediction', last_timestamp, processed_count))
+        conn.commit()
+        print(f"✅ Checkpoint updated: timestamp={last_timestamp}, processed_count={processed_count}")
+    except Exception as e:
+        conn.rollback()
+        print(f"❌ Failed to update checkpoint: {e}")
+    finally:
+        cur.close()
+
+def build_incremental_query(last_timestamp):
+    """Build optimized query with column selection"""
+    if last_timestamp:
+        where_clause = f"WHERE load_date > '{last_timestamp}'"
+    else:
+        # For first run, limit to recent data to avoid processing everything
+        where_clause = "WHERE load_date >= CURRENT_DATE - INTERVAL '30 days'"
+    
+    return f"""
+    SELECT 
+        f.transaction_id,
+        f.transaction_amount,
+        f.transaction_type,
+        f.transaction_status,
+        cu.customer_email_domain,
+        f.cvv_match_result,
+        m.merchant_category,
+        f.merchant_risk_score,
+        d.device_os,
+        f.is_first_time_customer_merchant,
+        f.time_since_last_txn_sec,
+        f.card_entry_method,
+        f.transaction_latitude,
+        f.transaction_longitude,
+        f.distance_from_last_txn_km,
+        m.merchant_latitude,
+        m.merchant_longitude,
+        f.load_date
+    FROM  {input_table} f
+    JOIN 
+        dim_device d on d.device_SK = f.device_SK
+    JOIN 
+        dim_customer cu on cu.customer_SK = f.customer_SK
+    JOIN 
+        dim_merchant m on m.merchant_SK = f.merchant_SK
+    {where_clause}
+    ORDER BY load_date
+    """
+
+# --- Step 1: Load model ---
+local_model_path = '/tmp/model.pkl'
+s3.download_file(s3_bucket, model_key, local_model_path)
+model = joblib.load(local_model_path)
+print("✅ Model loaded successfully")
+
+# --- Step 2: Connect to Redshift ---
+conn = psycopg2.connect(**redshift_config)
+print("✅ Connected to Redshift")
+
+# Get checkpoint
+last_timestamp, total_processed = get_last_checkpoint(conn)
+print(f"📊 Last checkpoint: timestamp={last_timestamp}, total_processed={total_processed}")
+
+# Build and execute query
+query = build_incremental_query(last_timestamp)
+print("🔍 Executing incremental query...")
+df = pd.read_sql(query, conn)
+
+if df.empty:
+    print("✅ No new data to process")
+    conn.close()
+    exit(0)
+
+print(f"📥 Loaded {len(df)} new transactions")
+max_timestamp = df['load_date'].max()
+
+# --- Step 3: Optimized Feature Engineering ---
+# Vectorized operations for speed
+df['txn_per_hour'] = np.log1p(3600 / np.maximum(df['time_since_last_txn_sec'], 1))
+df['is_online'] = df['card_entry_method'].isin(['online', 'manual_keyed', 'qr_code', 'contactless_mobile']).astype(np.int8)
+df['cvv_match_result'] = (df['cvv_match_result'] == 'match').astype(np.int8)
+df['is_first_time_customer_merchant'] = df['is_first_time_customer_merchant'].astype(np.int8)
+
+# Optimized binning
+df['amount_binned'] = pd.cut(df['transaction_amount'], 
+                           bins=[-1, 50, 500, 3000, 10000, np.inf], 
+                           labels=False).astype(np.int8)
+
+# Vectorized haversine calculation
+def fast_haversine(lat1, lon1, lat2, lon2):
+    R = 6371
+    lat1, lon1, lat2, lon2 = np.radians([lat1, lon1, lat2, lon2])
+    dlat, dlon = lat2 - lat1, lon2 - lon1
+    a = np.sin(dlat/2)**2 + np.cos(lat1)*np.cos(lat2)*np.sin(dlon/2)**2
+    return R * 2 * np.arcsin(np.sqrt(a))
+
+df['distance_to_merchant'] = np.log1p(fast_haversine(
+    df['transaction_latitude'].values, df['transaction_longitude'].values,
+    df['merchant_latitude'].values, df['merchant_longitude'].values
+))
+
+df['is_far_txn'] = (df['distance_from_last_txn_km'] > 300).astype(np.int8)
+df['merchant_risk_score'] = np.log1p(df['merchant_risk_score'])
+
+# Drop columns efficiently
+columns_to_drop = [
+    'transaction_amount', 'time_since_last_txn_sec', 'distance_from_last_txn_km',
+    'card_entry_method', 'transaction_latitude', 'transaction_longitude',
+    'merchant_latitude', 'merchant_longitude'
+]
+df.drop(columns=columns_to_drop, inplace=True)
+
+# --- Step 4: Fast Encoding & Scaling ---
+# Get categorical columns
+categorical_cols = [col for col in df.select_dtypes(include='object').columns 
+                   if col not in ['transaction_id', 'load_date']]
+
+# Fast label encoding
+le = LabelEncoder()
+for col in categorical_cols:
+    df[col] = le.fit_transform(df[col].astype(str))
+
+# Get numeric columns for scaling
+numeric_cols = [col for col in df.select_dtypes(include=['int8', 'int64', 'float64']).columns 
+               if col != 'transaction_id']
+
+# Fast scaling
+scaler = StandardScaler()
+df[numeric_cols] = scaler.fit_transform(df[numeric_cols])
+
+# --- Step 5: Model Prediction ---
+features = df[numeric_cols]
+df['is_fraud_pred'] = model.predict(features)
+
+fraud_count = df['is_fraud_pred'].sum()
+print(f"🚨 Predicted {fraud_count} fraudulent transactions out of {len(df)}")
+
+# --- Step 6: Fast CSV generation and S3 upload ---
+output_df = df[['transaction_id', 'is_fraud_pred']].copy()
+output_df['email'] = 'omarmeligy2022@gmail.com'
+output_df['email_sent'] = False
+
+# Write directly to string buffer for speed
+csv_buffer = StringIO()
+output_df.to_csv(csv_buffer, index=False, header=False, sep=',')
+csv_content = csv_buffer.getvalue()
+
+# Upload directly from memory
+s3_key = f"{output_key_prefix}predicted_fraud_{uuid.uuid4()}.csv"
+s3.put_object(Bucket=s3_bucket, Key=s3_key, Body=csv_content)
+print(f"📤 Uploaded predictions to s3://{s3_bucket}/{s3_key}")
+
+# --- Step 7: COPY to Redshift ---
+s3_uri = f"s3://{s3_bucket}/{s3_key}"
+cur = conn.cursor()
+
+try:
+    copy_sql = f"""
+        COPY {output_table}
+        FROM '{s3_uri}'
+        IAM_ROLE '{iam_role}'
+        FORMAT AS CSV
+        DELIMITER ',' 
+        REGION '{region}'
+        TIMEFORMAT 'auto'
+        IGNOREHEADER 0;
+    """
+    cur.execute(copy_sql)
+    conn.commit()
+    print("✅ COPY command executed successfully")
+    
+    # Update checkpoint
+    new_total_processed = total_processed + len(df)
+    update_checkpoint(conn, max_timestamp, new_total_processed)
+    
+except Exception as e:
+    conn.rollback()
+    raise RuntimeError(f"❌ Failed COPY to Redshift: {e}")
+finally:
+    cur.close()
+    conn.close()
+
+print(f"✅ Processing complete. Processed {len(df)} transactions in total: {total_processed + len(df)}")
