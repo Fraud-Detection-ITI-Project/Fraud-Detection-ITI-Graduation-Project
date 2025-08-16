@@ -322,19 +322,13 @@ Comprehensive project documentation including detailed system architecture, impl
 ---
 
 ## 📄 License
-
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
+<p align="left">
+  <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT">
+</p>
 <div align="center">
   <img src="https://capsule-render.vercel.app/api?type=waving&color=0:FF2400,100:800000&height=120&section=footer" alt="Footer">
 </div>
-
 <div align="center">
-  
 **If this project helped you, please give it a star!**
-
-[Report Bug](https://github.com/Fraud-Detection-ITI-Project/Fraud-Detection-ITI-Graduation-Project/issues) • [Request Feature](https://github.com/Fraud-Detection-ITI-Project/Fraud-Detection-ITI-Graduation-Project/issues) • [Email](mailto:your-email@example.com)
-
 </div>
