@@ -26,7 +26,7 @@
 
 This repository contains a comprehensive, cloud-native financial fraud detection system built on Amazon Web Services (AWS). The system ingests, processes, and analyzes high-velocity transaction data to identify and alert on fraudulent activity in near real-time, reducing detection latency from hours to minutes.
 
-> **Capstone Project** - Developed for the Information Technology Institute (ITI) graduation program
+> **🎓Capstone Project** - Developed for the Information Technology Institute (ITI) graduation program
 
 ### ✨ Key Highlights
 
