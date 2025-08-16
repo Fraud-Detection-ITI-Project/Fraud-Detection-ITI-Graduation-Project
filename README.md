@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:FF2400,100:800000&height=350&section=header&text=Cloud-Native%20Real-Time%20Financial%20Fraud%20Detection%20System&fontSize=30&fontColor=ffffff&animation=fadeIn&fontAlign=center&fontAlignY=40&desc=AWS%20•%20Kafka%20•%20Glue%20•%20Redshift%20•%20XGBoost%20•%20QuickSight%20•%20Kinesis%20•%20S3%20•%20CloudWatch%20•%20SNS%20•%20Lambda&descSize=18&descAlign=middle&descAlignY=75" alt="Header">
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:FF2400,100:800000&height=350&section=header&text=Cloud-Native%20Real-Time%20Financial%20Fraud%20Detection%20System&fontSize=30&fontColor=ffffff&animation=fadeIn&fontAlign=center&fontAlignY=40&desc=AWS%20•%20Kafka%20•%20Kinesis%20•%20S3%20•%20Glue%20•%20Redshift%20•%20XGBoost%20•%20Lambda%20•%20SNS%20•%20QuickSight%20•%20CloudWatch&descSize=18&descAlign=middle&descAlignY=75" alt="Header">
 </div>
 
 <p align="center">
@@ -12,6 +12,9 @@
   <img src="https://img.shields.io/badge/Monitoring-CloudWatch-DC143C?logo=amazon-aws&logoColor=white" alt="CloudWatch">
   <img src="https://img.shields.io/badge/Alerting-Amazon%20SNS-DC143C?logo=amazon-aws&logoColor=white" alt="SES">
   <img src="https://img.shields.io/badge/Serverless-AWS%20Lambda-DC143C?logo=awslambda&logoColor=white" alt="Lambda">
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/Language-Python-3776AB?logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/ML%20Algorithm-XGBoost-DC143C" alt="XGBoost">
   <img src="https://img.shields.io/badge/Visualization-QuickSight-F2C811?logo=amazon-quicksight&logoColor=DC143C" alt="QuickSight">
@@ -19,150 +22,319 @@
 
 ---
 
-This repository contains the source code and documentation for an end-to-end, cloud-native financial fraud detection system. The architecture is built entirely on Amazon Web Services (AWS) and is designed to ingest, process, and analyze high-velocity transaction data to identify and alert on fraudulent activity in near real-time.
+## 🚀 Project Overview
 
-This project was developed as a capstone for the Information Technology Institute (ITI).
+This repository contains a comprehensive, cloud-native financial fraud detection system built on Amazon Web Services (AWS). The system ingests, processes, and analyzes high-velocity transaction data to identify and alert on fraudulent activity in near real-time, reducing detection latency from hours to minutes.
 
-## Table of Contents
+> **Capstone Project** - Developed for the Information Technology Institute (ITI) graduation program
 
-- [Project Abstract](#project-abstract)
-- [Key Architectural Features](#key-architectural-features)
-- [System Architecture and Data Flow](#system-architecture-and-data-flow)
-- [Technology Stack](#technology-stack)
-- [Synthetic Data Generation](#synthetic-data-generation)
-- [Machine Learning Model](#machine-learning-model)
-- [Automated Alerting Workflow](#automated-alerting-workflow)
-- [Analytics and Visualization](#analytics-and-visualization)
-- [Deployment Guide](#deployment-guide)
-- [Project Structure](#project-structure)
-- [Limitations and Future Work](#limitations-and-future-work)
-- [Contributors](#contributors)
+### ✨ Key Highlights
 
-## Project Abstract
+- **Real-time Processing**: Sub-minute fraud detection and alerting
+- **Event-driven Architecture**: Scalable, serverless, and cost-effective
+- **Advanced ML**: 97.91% accuracy with XGBoost algorithm
+- **Rich Analytics**: Interactive dashboards and comprehensive monitoring
+- **Enterprise Security**: VPC isolation and IAM best practices
 
-Traditional fraud detection mechanisms, often characterized by batch processing and static rule engines, are ill-equipped to handle the speed and sophistication of modern financial fraud. This project implements a modern alternative: a scalable, event-driven pipeline that leverages serverless computing and machine learning. The system is capable of processing transaction streams, applying a predictive model to score for fraud, and triggering automated alerts, reducing the detection-to-response latency from hours to minutes.
+## 📋 Table of Contents
 
-## Key Architectural Features
+- [🏗️ System Architecture](#-system-architecture)
+- [💡 Key Features](#-key-features)
+- [🛠️ Technology Stack](#️-technology-stack)
+- [🤖 Machine Learning Model](#-machine-learning-model)
+- [📊 Data Pipeline](#-data-pipeline)
+- [🔔 Alerting System](#-alerting-system)
+- [📈 Analytics Dashboard](#-analytics-dashboard)
+- [📁 Project Structure](#-project-structure)
+- [🔒 Security](#-security)
+- [📚 Documentation](#-documentation)
+- [👥 Contributors](#-contributors)
+- [📄 License](#-license)
 
-- **High-Throughput, Resilient Ingestion:** Utilizes a self-managed Apache Kafka cluster as a durable buffer, decoupling the data source from the cloud pipeline and ensuring data integrity, with Amazon Kinesis for scalable stream ingestion into AWS.
-- **Serverless Data Processing:** Employs AWS Glue for serverless ETL and ML inference, automatically scaling resources to match the workload, eliminating the need for server management.
-- **Optimized Data Warehousing:** A centralized data warehouse in Amazon Redshift is designed with a modified star schema and strategic distribution keys to ensure high-performance analytical queries.
-- **Intelligent Fraud Detection:** A high-performance XGBoost model serves as the core detection engine, trained to identify complex, non-linear patterns indicative of fraudulent behavior.
-- **End-to-End Automation:** The entire workflow, from data processing to alerting, is orchestrated by AWS Step Functions, providing robust error handling, state management, and an auditable execution history.
-- **Secure by Design:** The entire infrastructure is provisioned within a logically isolated Amazon VPC, with strict network controls and IAM roles that adhere to the principle of least privilege.
+## 🏗️ System Architecture
 
-## System Architecture and Data Flow
+<div align="center">
+  <img src="Architecture/fraud_arch.png" alt="System Architecture" width="90%" style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.3);">
+</div>
 
-<p align="center">
-  <img src="Architecture/fraud_arch.png" alt="System Architecture" width="85%">
-</p>
+### 🏛️ Architectural Layers
 
-**Architectural Layers Description:**
+| Layer | Purpose | Key Components |
+|-------|---------|----------------|
+| **Ingestion** | High-throughput data capture | Apache Kafka, Amazon Kinesis, S3 |
+| **Processing** | Serverless ETL and ML inference | AWS Glue, Step Functions |
+| **Alerting** | Real-time fraud notifications | Lambda, SNS, SES |
+| **Analytics** | Business intelligence & monitoring | QuickSight, CloudWatch, Redshift |
+| **Security** | Infrastructure protection | VPC, IAM, Secrets Manager |
 
-1. **Data Ingestion Layer:** Captures raw transaction data from an EC2 instance acting as a Kafka Producer. Data is temporarily staged in S3 before being consumed by Amazon Kinesis and stored in a Central Data Lake (S3).
-2. **Data Processing Layer:** AWS Glue jobs clean and transform data, load it into Redshift, and run ML inference using the XGBoost model.
-3. **Fraud Alerting Layer:** Predictions are stored in Redshift, then AWS Lambda checks for new anomalies and triggers Amazon SES to send fraud alerts via email.
-4. **Monitoring Layer:** CloudWatch collects logs and metrics from all services, archived into Redshift for analysis.
-5. **Insights Layer:** Amazon QuickSight connects to Redshift to provide interactive fraud analytics dashboards.
+## 💡 Key Features
 
-## Technology Stack
+### 🚀 High-Performance Ingestion
+- **Apache Kafka** cluster for durable message buffering
+- **Amazon Kinesis** for scalable stream processing
+- **S3 Data Lake** for centralized storage with lifecycle policies
 
-- **Data Ingestion:** Apache Kafka, Amazon Kinesis Data Streams, Amazon Kinesis Firehose
-- **Data Storage:** Amazon S3 (Data Lake), Amazon Redshift (Data Warehouse)
-- **Data Processing:** AWS Glue (PySpark)
-- **Machine Learning:** Python, Pandas, Scikit-learn, XGBoost
-- **Orchestration:** AWS Step Functions
-- **Serverless Compute:** AWS Lambda
-- **Alerting:** Amazon SES
-- **Analytics:** Amazon QuickSight
-- **Infrastructure & Security:** Amazon VPC, EC2, IAM, CloudWatch, Secrets Manager
+### 🤖 Intelligent Fraud Detection
+- **XGBoost Model** with 97.91% accuracy
+- **Real-time Inference** on streaming data
+- **Multiple Fraud Patterns** detection (account takeover, velocity attacks, etc.)
 
-## Synthetic Data Generation
+### 📈 Enterprise Analytics
+- **QuickSight Dashboards** for executive reporting
+- **CloudWatch Monitoring** with custom metrics
+- **Redshift Data Warehouse** optimized for analytical queries
 
-A custom Python simulator generates synthetic financial transactions with labeled fraud cases for model training/testing. Fraud scenarios include:
-- **Account Takeover**
-- **Card Testing**
-- **Velocity Attack**
-- **Impossible Travel**
-- **Synthetic Identity**
+### 🔄 Full Automation
+- **Step Functions** orchestration
+- **Serverless Architecture** with auto-scaling
+- **Error Handling** and retry mechanisms
 
-## Machine Learning Model
+## 🛠️ Technology Stack
 
-- **Algorithm:** XGBoost (Extreme Gradient Boosting)  
-- **Metrics:**  
-  - Accuracy: `97.91%`  
-  - Precision: `84.12%`  
-  - Recall: `97.50%`  
-  - F1-Score: `90.32%`  
-  - Cross-Validation F1: `94.17%`  
-  - AUC (ROC): `1.00`  
+<details>
+<summary><b>🔧 Core Technologies</b></summary>
 
-## Automated Alerting Workflow
+| Category | Technologies |
+|----------|--------------|
+| **Cloud Platform** | Amazon Web Services (AWS) |
+| **Data Streaming** | Apache Kafka, Amazon Kinesis |
+| **Data Storage** | Amazon S3, Amazon Redshift |
+| **Data Processing** | AWS Glue (PySpark) |
+| **Machine Learning** | Python, XGBoost, Scikit-learn, Pandas |
+| **Orchestration** | AWS Step Functions |
+| **Serverless** | AWS Lambda |
+| **Messaging** | Amazon SNS, Amazon SES |
+| **Analytics** | Amazon QuickSight |
+| **Security** | VPC, IAM, Secrets Manager |
+| **Monitoring** | Amazon CloudWatch |
 
-Orchestrated by AWS Step Functions:
-1. Run ETL in AWS Glue
-2. Run ML Inference Job
-3. Check Redshift for new fraud
-4. Trigger SNS alerts via Lambda
+</details>
 
-## Analytics and Visualization
+## 🤖 Machine Learning Model
 
-Amazon QuickSight dashboard includes:
-- KPIs (TTV, Fraud Rate, Loss)
-- Fraud distribution charts
-- Model performance trends
-- High-risk transaction tracking
+### 📊 Model Performance
 
-## Deployment Guide
+<div align="center">
 
-1. Clone repository  
-2. Set up AWS infrastructure (VPC, S3, Redshift, Kinesis, Glue, Lambda)  
-3. Launch Kafka cluster on EC2  
-4. Configure Glue jobs & Step Functions  
-5. Run producer to stream data  
-6. Connect QuickSight to Redshift
+| Metric | Score | Description |
+|--------|--------|-------------|
+| **Accuracy** | `97.91%` | Overall classification accuracy |
+| **Precision** | `84.12%` | True fraud / (True fraud + False positive) |
+| **Recall** | `97.50%` | True fraud / (True fraud + False negative) |
+| **F1-Score** | `90.32%` | Harmonic mean of precision and recall |
+| **Cross-Val F1** | `94.17%` | Cross-validated F1 score |
+| **AUC-ROC** | `1.00` | Area under the ROC curve |
 
-## Project Structure
+</div>
 
-```text
-.
-├── aws_glue_scripts/
-│   ├── etl_cleaning_job.py
-│   └── ml_inference_job.py
-├── data_simulator/
-│   └── synthetic_data_generator.py
-├── kafka/
-│   ├── docker-compose.yml
-│   ├── producer.py
-│   └── consumer.py
-├── lambda_function/
-│   └── send_fraud_alert.py
-├── Architecture/
-│   └── fraud_arch.png
-└── documentation/
-    └── Full_Project_Documentation.pdf 
+### 🕵️ Fraud Scenarios Detected
+
+- **Account Takeover**: Unauthorized access patterns
+- **Card Testing**: Small transaction probing
+- **Velocity Attacks**: Rapid transaction sequences  
+- **Impossible Travel**: Geographically impossible transactions
+- **Synthetic Identity**: Artificially created identities
+
+## 📊 Data Pipeline
+
+### 🔄 Processing Workflow
+
+```mermaid
+graph LR
+    A[Transaction Data] --> B[Kafka Producer]
+    B --> C[Kinesis Stream]
+    C --> D[S3 Data Lake]
+    D --> E[Glue ETL Job]
+    E --> F[ML Inference]
+    F --> G[Redshift DW]
+    G --> H{Fraud Detected?}
+    H -->|Yes| I[Send Alert]
+    H -->|No| J[Store Results]
+    G --> K[QuickSight Dashboard]
 ```
 
-## Limitations and Future Work
+### 📈 Data Flow Stages
 
-**Limitations:**
+1. **Ingestion**: Kafka → Kinesis → S3
+2. **Processing**: Glue ETL → Feature Engineering
+3. **Inference**: XGBoost Model → Fraud Scoring
+4. **Storage**: Results → Redshift Data Warehouse
+5. **Alerting**: Lambda → SNS → Email Notifications
+6. **Analytics**: QuickSight → Interactive Dashboards
+
+## 🔔 Alerting System
+
+### 📧 Alert Configuration
+
+The system sends immediate email alerts when fraud is detected:
+
+- **High Priority**: Fraud score > 0.9
+- **Medium Priority**: Fraud score 0.7 - 0.9
+- **Low Priority**: Fraud score 0.5 - 0.7
+
+### 🚨 Alert Content
+
+- Transaction details
+- Fraud probability score
+- Detected patterns
+- Recommended actions
+
+## 📈 Analytics Dashboard
+
+### 📊 Key Performance Indicators
+
+- **Transaction Volume**: Real-time processing metrics
+- **Fraud Detection Rate**: Percentage of transactions flagged
+- **False Positive Rate**: Model accuracy indicators
+- **Response Time**: Alert latency measurements
+
+### 📋 Dashboard Sections
+
+1. **Executive Summary**: High-level KPIs and trends
+2. **Fraud Analysis**: Detailed fraud pattern breakdowns
+3. **Model Performance**: ML model accuracy and drift monitoring
+4. **Operational Metrics**: System health and performance
+
+### 📊 Key Insights & Analytics
+
+Our QuickSight dashboard provides comprehensive fraud detection insights including:
+
+- **Total Transaction Value**: Real-time transaction volume monitoring
+- **Total Transaction Count**: Transaction frequency analysis
+- **Fraud Rate Percentage**: System-wide fraud detection rates
+- **Fraud Loss Value**: Financial impact assessment
+- **Transaction Status Breakdown**: Status distribution analytics
+- **Customer Count by Address Change Risk**: Risk profiling by address changes
+- **Fraud Count by Dimension**: Pivotable bar chart for multi-dimensional analysis
+- **Model Precision**: ML model accuracy metrics
+- **False Positive Rate**: Model performance indicators
+- **False Positive Rate Over Time**: Temporal FPR trend analysis
+- **Fraud Count by Merchant Risk Score**: Merchant-based risk assessment
+
+### 📸 Dashboard Screenshots
+
+<div align="center">
+  <img src="Insights/1.png" alt="Dashboard Analytics 1" width="15%" style="border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); margin: 10px;">
+  <img src="Insights/2.png" alt="Dashboard Analytics 2" width="60%" style="border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); margin: 10px;">
+</div>
+
+<div align="center">
+  <img src="Insights/3.png" alt="Dashboard Analytics 3" width="60%" style="border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); margin: 10px;">
+  <img src="Insights/4.png" alt="Dashboard Analytics 4" width="60%" style="border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); margin: 10px;">
+</div>
+
+<div align="center">
+  <img src="Insights/5.png" alt="Dashboard Analytics 5" width="60%" style="border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); margin: 10px;">
+</div>
+
+## 📁 Project Structure
+
+```
+Fraud-Detection-ITI-Graduation-Project/
+├── AWS GLUE/
+│   ├── ETL JOB
+│   └── ML Prediction Job
+├── Architecture/
+│   └── fraud_arch.png
+├── Data Warehouse/
+│   └── Data Warehouse.png
+├── Docs/
+│   └── Real-Time Financial Fraud De...
+├── Email-Alert/
+│   ├── Alert-Lambda.py
+│   └── README.md
+├── Ingestion-Layer/
+│   ├── Consumer
+│   ├── kafka-configs
+│   ├── Producer
+│   └── fraud_data_generator
+├── .env
+├── docker-compose.yml
+├── Insights/
+│   ├── 1.png
+│   ├── 2.png
+│   ├── 3.png
+│   ├── 4.png
+│   └── 5.png
+├── Machine Learning/
+│   ├── Fraud-Detection-Model.ipynb
+│   ├── xgb_fraud_model.pkl
+│   ├── xgb_fraud_model_pkl_4
+│   └── README.md
+```
+
+## 🔒 Security
+
+### 🛡️ Security Measures
+
+- **VPC Isolation**: All resources within private subnets
+- **IAM Least Privilege**: Role-based access control
+- **Data Encryption**: At rest (S3, Redshift) and in transit (TLS)
+- **Secrets Management**: AWS Secrets Manager for credentials
+- **Network Security**: Security groups and NACLs
+- **Audit Logging**: CloudTrail for API calls
+
+### 🔐 Security Best Practices
+
+- Regular security assessments
+- Automated vulnerability scanning
+- Multi-factor authentication
+- Regular credential rotation
+
+## 📚 Documentation
+
+**[📖 Real-Time Financial Fraud Detection System](Docs/Real-Time%20Financial%20Fraud%20Detection%20System.pdf)**
+
+Comprehensive project documentation including detailed system architecture, implementation details, and technical specifications.
+
+## 🚧 Limitations & Future Work
+
+### ⚠️ Current Limitations
+
 - Synthetic data may not match real-world complexity
-- Near real-time, not true real-time
-- Static model without auto-retraining
+- Near real-time processing (not true real-time)
+- Static model without automated retraining
+- Limited to financial transaction fraud
 
-**Future Work:**
-- Add streaming inference
-- Integrate MLOps with SageMaker
-- Implement explainable AI (SHAP)
+### 🔮 Future Enhancements
 
-## Contributors
+- **MLOps Integration**: Automated model retraining with SageMaker
+- **Explainable AI**: SHAP integration for model interpretability
+- **True Real-time**: Streaming ML inference with Kinesis Analytics
+- **Multi-cloud**: Support for Azure and GCP
+- **Advanced Fraud Types**: Credit card, insurance, and identity fraud
 
-- Seif El-Deen Gaber  
-- Omar Adel  
-- Yasmine Samir  
-- Abdelrahman Wael  
-- Ahmed Srour  
+## 👥 Contributors
+
+- Seif El-Deen Gaber
+- Omar Adel
+- Yasmine Samir
+- Abdelrahman Wael
+- Ahmed Srour
 
 **Project Supervisor:** Ibrahim Mohamed
 
+### 🎓 Institution
 
+**Information Technology Institute (ITI)**  
+*Big Data and Data Science Track*
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+<div align="center">
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:FF2400,100:800000&height=120&section=footer" alt="Footer">
+</div>
+
+<div align="center">
+  
+**If this project helped you, please give it a star!**
+
+[Report Bug](https://github.com/Fraud-Detection-ITI-Project/Fraud-Detection-ITI-Graduation-Project/issues) • [Request Feature](https://github.com/Fraud-Detection-ITI-Project/Fraud-Detection-ITI-Graduation-Project/issues) • [Email](mailto:your-email@example.com)
+
+</div>
