@@ -317,7 +317,7 @@ Comprehensive project documentation including detailed system architecture, impl
 ### 🎓 Institution
 
 **Information Technology Institute (ITI)**  
-*Big Data and Data Science Track*
+*Data Engineer Track*
 
 ---
 
